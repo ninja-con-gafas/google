@@ -5,7 +5,7 @@ The module provides utilities to interact with Google Sheets using a service acc
 from google.oauth2.service_account import Credentials
 from gspread import authorize, Spreadsheet
 from pandas import DataFrame
-from typing import Dict, List
+from typing import Dict
 
 def get_worksheets(spreadsheet_name: str, credentials: Credentials) -> Dict[str, DataFrame]:
 
@@ -25,8 +25,8 @@ def get_worksheets(spreadsheet_name: str, credentials: Credentials) -> Dict[str,
         None
     """
 
+    print(f"Loading all the worksheets from the {spreadsheet_name} spreadsheet")
     spreadsheet: Spreadsheet = authorize(credentials).open(spreadsheet_name)
-
     return {worksheet.title: DataFrame(data=worksheet.get_all_values()[1:],
                                        columns=worksheet.get_all_values()[0])
             for worksheet in spreadsheet.worksheets()}
