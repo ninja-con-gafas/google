@@ -108,6 +108,7 @@ def get_video_id(url: str) -> str:
         AttributeError: If the pattern is not found in the input string.
     """
 
+    print(f"Extracting Video ID from URL: {url}")
     pattern = r'(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=|live/)|youtu\.be/)([^"&?/ ]{11})'
     return search(pattern=pattern, string=url).group(1)
 
@@ -124,6 +125,7 @@ def get_video_transcript_en(video_id: str) -> str:
     """
 
     try:
+        print(f"Fetching English transcript for the video ID: {video_id}")
         return TextFormatter().format_transcript(YouTubeTranscriptApi.get_transcript(video_id))
     except TranscriptsDisabled:
         return f"Transcripts are disabled for video ID {video_id}"
