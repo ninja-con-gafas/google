@@ -4,6 +4,7 @@ The module provides utilities to interact with YouTube.
 
 import yt_dlp
 
+from ffmpeg import Error, input, probe
 from googleapiclient import discovery, errors
 from re import search
 from socket import timeout
@@ -93,6 +94,26 @@ def download_video_as_mp4(download_path: str, file_name: str, url: str) -> None:
             yt_dlp.utils.DownloadError, yt_dlp.utils.ExtractorError) as exception:
         print(f"Error downloading {file_name}: {exception} for URL: {url}")
 
+def get_video_duration(video_file_path: str) -> float:
+
+    """
+    Retrieves the duration of a video file.
+
+    args:
+        video_file_path (str): The file path of the video whose duration is to be retrieved.
+
+    returns:
+        float: The duration of the video in seconds.
+
+    raises:
+        KeyError: If the duration information is not found in the video file's metadata.
+        ValueError: If the metadata does not contain a valid duration value.
+    """
+
+    return float(probe(filename=video_file_path, v='error', select_streams='v:0', show_entries='stream=duration')
+                 .get("format")
+                 .get("duration"))
+
 def get_video_id(url: str) -> str:
 
     """
@@ -172,3 +193,24 @@ def get_video_url(api_key: str, query: str) -> str:
             return ""
     except (errors.HttpError, timeout) as exception:
         print(f"Error fetching video for {query}: {exception}")
+
+def is_video_corrupted(video_file_path: str) -> bool:
+
+    """
+    Checks whether a video file is corrupted by attempting to process it with FFmpeg.
+
+    args:
+        video_file_path (str): The file path of the video to be checked for corruption.
+
+    Returns:
+        bool: Returns `True` if the video file is likely corrupted, `False` otherwise.
+
+    Raises:
+        Error: If an error occurs while processing the file, indicating potential corruption.
+    """
+
+    try:
+        input(video_file_path).output("null", f="null").run()
+        return False
+    except Error:
+        return True
