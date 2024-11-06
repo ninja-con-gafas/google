@@ -130,16 +130,14 @@ def get_video_transcript_en(video_id: str) -> str:
     except TranscriptsDisabled:
         return f"Transcripts are disabled for video ID {video_id}"
         
-def get_video_url(developer_key: str, service_name: str, query: str, version: str) -> str:
+def get_video_url(api_key: str, query: str) -> str:
 
     """
-    Get the YouTube video URL corresponding to the query.
+    Get the URL of the first video result of a YouTube search query.
 
     args:
-        developer_key (str): YouTube Data API developer key.
-        service_name (str): Name of the YouTube API service.
+        api_key (str): YouTube Data API key.
         query (str): The search query string (title and artist of the song).
-        version (str): Version of the YouTube API.
 
     returns:
         str: URL of the YouTube video or an empty string if no video is found.
@@ -151,17 +149,20 @@ def get_video_url(developer_key: str, service_name: str, query: str, version: st
 
     print(f"Getting video ID for {query}")
     try:
-        video_id: str = discovery.build(developerKey=developer_key,
+        video_id: str = (discovery.build(developerKey=api_key,
                                         num_retries=5,
-                                        serviceName=service_name,
-                                        version=version).search() \
-            .list(maxResults=1,
-                  part="id",
-                  q=f"{query}",
-                  type="video",
-                  videoDefinition="high",
-                  videoDuration="any") \
-            .execute().get("items", [{}])[0].get("id", {}).get("videoId")
+                                        serviceName="youtube",
+                                        version="v3").search()
+                         .list(maxResults=1,
+                               part="id",
+                               q=f"{query}",
+                               type="video",
+                               videoDefinition="high",
+                               videoDuration="any")
+                         .execute()
+                         .get("items", [{}])[0]
+                         .get("id", {})
+                         .get("videoId"))
 
         if video_id:
             print(f"{video_id} is the video ID of {query}")
@@ -171,4 +172,3 @@ def get_video_url(developer_key: str, service_name: str, query: str, version: st
             return ""
     except (errors.HttpError, timeout) as exception:
         print(f"Error fetching video for {query}: {exception}")
-        return ""
