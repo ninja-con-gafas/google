@@ -5,9 +5,10 @@ The module provides utilities to interact with YouTube.
 import yt_dlp
 
 from ffmpeg import Error, input, probe
-from googleapiclient import discovery, errors
 from re import search
-from socket import timeout
+from requests import get, post, Response
+from requests.exceptions import HTTPError, ConnectionError, Timeout
+from typing import Dict, List
 from youtube_transcript_api import TranscriptsDisabled, YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
 
@@ -110,6 +111,7 @@ def get_video_duration(video_file_path: str) -> float:
         ValueError: If the metadata does not contain a valid duration value.
     """
 
+    print(f"Getting video duration of {video_file_path}")
     return float(probe(filename=video_file_path, v='error', select_streams='v:0', show_entries='stream=duration')
                  .get("format")
                  .get("duration"))
@@ -133,6 +135,39 @@ def get_video_id(url: str) -> str:
     pattern = r'(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=|live/)|youtu\.be/)([^"&?/ ]{11})'
     return search(pattern=pattern, string=url).group(1)
 
+def get_video_metadata(video_id: str) -> Dict:
+
+    """
+    Retrieves metadata for a YouTube video using its video ID.
+
+    args:
+        video_id (str): The unique identifier of the YouTube video.
+
+    returns:
+        Dict: A dictionary containing the video's metadata or None if an error occurs during the request.
+
+    raises:
+        ConnectionError: Raised if there is a network connectivity issue.
+        HTTPError: Raised if the HTTP response status is an error.
+        Timeout: Raised if the request to the server times out.
+    """
+
+    print(f"Getting video metadata for the YouTube video ID: {video_id}")
+    url = "https://www.youtube.com/oembed"
+    params = {
+        "format": "json",
+        "url": f"https://www.youtube.com/watch?v={video_id}"
+    }
+
+    try:
+        response = get(url, params=params)
+        response.raise_for_status()
+    except (ConnectionError, HTTPError, Timeout) as exception:
+        print(f"An error occurred: {exception}")
+        return {}
+    else:
+        return response.json()
+
 def get_video_transcript_en(video_id: str) -> str:
 
     """
@@ -150,49 +185,6 @@ def get_video_transcript_en(video_id: str) -> str:
         return TextFormatter().format_transcript(YouTubeTranscriptApi.get_transcript(video_id))
     except TranscriptsDisabled:
         return f"Transcripts are disabled for video ID {video_id}"
-        
-def get_video_url(api_key: str, query: str) -> str:
-
-    """
-    Get the URL of the first video result of a YouTube search query.
-
-    args:
-        api_key (str): YouTube Data API key.
-        query (str): The search query string (title and artist of the song).
-
-    returns:
-        str: URL of the YouTube video or an empty string if no video is found.
-
-    raises:
-        errors.HttpError: If the YouTube API request fails.
-        timeout: If the request times out.
-    """
-
-    print(f"Getting video ID for {query}")
-    try:
-        video_id: str = (discovery.build(developerKey=api_key,
-                                        num_retries=5,
-                                        serviceName="youtube",
-                                        version="v3").search()
-                         .list(maxResults=1,
-                               part="id",
-                               q=f"{query}",
-                               type="video",
-                               videoDefinition="high",
-                               videoDuration="any")
-                         .execute()
-                         .get("items", [{}])[0]
-                         .get("id", {})
-                         .get("videoId"))
-
-        if video_id:
-            print(f"{video_id} is the video ID of {query}")
-            return f"https://youtu.be/{video_id}"
-        else:
-            print(f"No video found for {query}")
-            return ""
-    except (errors.HttpError, timeout) as exception:
-        print(f"Error fetching video for {query}: {exception}")
 
 def is_video_corrupted(video_file_path: str) -> bool:
 
@@ -214,3 +206,75 @@ def is_video_corrupted(video_file_path: str) -> bool:
         return False
     except Error:
         return True
+
+def search_youtube(query: str) -> List[str]:
+
+    """
+    Get the list of YouTube video URLs for a search query.
+
+    args:
+        query (str): The search query.
+
+    returns:
+        List[str]: The list of URLs result of the search query.
+
+    raises:
+        ConnectionError: Raised if there is a network connectivity issue.
+        HTTPError: Raised if the HTTP response status is an error.
+        Timeout: Raised if the request to the server times out.
+    """
+
+    print(f"Getting the list of video URLs for the search query: {query}")
+    url = 'https://www.youtube.com/youtubei/v1/search'
+    params = {
+        'prettyPrint': 'false'
+    }
+    headers = {
+        'Accept': '*/*',
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
+    }
+    json_data = {
+        'context': {
+            'client': {
+                'hl': 'en-IN',
+                'gl': 'IN',
+                'clientName': 'WEB',
+                'clientVersion': '2.20241107.01.00',
+                'originalUrl': 'https://www.youtube.com/results',
+                'platform': 'DESKTOP',
+            },
+        },
+        'query': query,
+    }
+
+    try:
+        response: Response = post(url, params=params, headers=headers, json=json_data)
+        response.raise_for_status()
+    except (ConnectionError, HTTPError, Timeout) as exception:
+        print(f"An error occurred: {exception}")
+    else:
+        video_ids: List[str] = []
+
+        def __search_dictionary(dictionary: Dict, key: str):
+            if key in dictionary:
+                return dictionary.get(key)
+            for value in dictionary.values():
+                if isinstance(value, dict):
+                    item = __search_dictionary(value, key)
+                    if item is not None:
+                        return item
+
+        search_results: Dict = (response.json()
+                .get("contents")
+                .get("twoColumnSearchResultsRenderer")
+                .get("primaryContents")
+                .get("sectionListRenderer")
+                .get("contents")[0]
+                .get("itemSectionRenderer")
+                .get("contents"))
+
+        for result in search_results :
+            video_ids.append(__search_dictionary(dictionary=result, key="videoId"))
+
+        return [f"https://youtu.be/{video_id}" for video_id in video_ids if video_id is not None]
