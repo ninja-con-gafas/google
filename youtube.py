@@ -5,8 +5,9 @@ The module provides utilities to interact with YouTube.
 import yt_dlp
 
 from googleapiclient import discovery, errors
+from re import search
 from socket import timeout
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import TranscriptsDisabled, YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
 
 def download_audio_as_mp3(download_path: str, file_name: str, url: str) -> None:
@@ -92,7 +93,26 @@ def download_video_as_mp4(download_path: str, file_name: str, url: str) -> None:
             yt_dlp.utils.DownloadError, yt_dlp.utils.ExtractorError) as exception:
         print(f"Error downloading {file_name}: {exception} for URL: {url}")
 
+def get_video_id(url: str) -> str:
+
+    """
+    Extracts the video ID from a YouTube URL using regular expression.
+
+    args:
+        url (str): The YouTube URL string from which the video ID should be extracted.
+
+    returns:
+        str: The extracted video ID.
+
+    raises:
+        AttributeError: If the pattern is not found in the input string.
+    """
+
+    pattern = r'(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=|live/)|youtu\.be/)([^"&?/ ]{11})'
+    return search(pattern=pattern, string=url).group(1)
+
 def get_video_transcript_en(video_id: str) -> str:
+
     """
     Retrieves the English transcript of a YouTube video and returns it in plain text format.
 
@@ -102,7 +122,11 @@ def get_video_transcript_en(video_id: str) -> str:
     returns:
         str: A plain text formatted string containing the transcript of the video.
     """
-    return TextFormatter().format_transcript(YouTubeTranscriptApi.get_transcript(video_id))
+
+    try:
+        return TextFormatter().format_transcript(YouTubeTranscriptApi.get_transcript(video_id))
+    except TranscriptsDisabled:
+        return f"Transcripts are disabled for video ID {video_id}"
         
 def get_video_url(developer_key: str, service_name: str, query: str, version: str) -> str:
 
