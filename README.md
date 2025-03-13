@@ -12,4 +12,4 @@ The repository features a collection of modules to interact with Google products
   Facilitates identity and access management for various Google services.
 
 **4. YouTube**:  
-  Facilitates interactions with YouTube through the YouTube Data API and third party libraries.
+  Facilitates interactions with YouTube through the YouTube's internal API and third party libraries.
