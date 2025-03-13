@@ -1,9 +1,108 @@
 """
-The module provides utilities to interact with YouTube using YouTube Data API.
+The module provides utilities to interact with YouTube.
 """
+
+import yt_dlp
 
 from googleapiclient import discovery, errors
 from socket import timeout
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.formatters import TextFormatter
+
+def download_audio_as_mp3(download_path: str, file_name: str, url: str) -> None:
+
+    """
+    Download the best available audio stream from a YouTube video and save it as a mp3 file.
+
+    args:
+        download_path (str): Path to download the mp3 file.
+        file_name (str): Name of the mp3 file to save the audio stream.
+        url (str): URL of the YouTube video to download.
+
+    returns:
+        None
+
+    raises:
+        yt_dlp.utils.DownloadError: If there is an error during the download process.
+        yt_dlp.utils.ExtractorError: If there is an error extracting the video information.
+    """
+
+    try:
+        print(f"Downloading audio stream for {file_name} from URL: {url}")
+        ydl_opts = {
+            "abort_on_error": True,
+            "abort_on_unavailable_fragments": True,
+            "format": "bestaudio/best",
+            "outtmpl": f"{download_path}/.tmp/{file_name}.%(ext)s",
+            "postprocessors": [
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                    "preferredquality": "0",
+                },
+                {
+                    'key': 'ExecAfterDownload',
+                    'exec_cmd': f'mv "{download_path}/.tmp/{file_name}.%(ext)s" "{download_path}/{file_name}.%(ext)s"'
+                }],
+            "socket_timeout": 30,
+            "verbose": True
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+    except (AttributeError, TypeError, ValueError,
+            yt_dlp.utils.DownloadError, yt_dlp.utils.ExtractorError) as exception:
+        print(f"Error downloading {file_name}: {exception} for URL: {url}")
+
+def download_video_as_mp4(download_path: str, file_name: str, url: str) -> None:
+
+    """
+    Download the best available video stream from a YouTube video and save it as a mp4 file.
+
+    args:
+        download_path (str): Path to download the mp4 file.
+        file_name (str): Name of the mp4 file to save the video stream.
+        url (str): URL of the YouTube video to download.
+
+    returns:
+        None
+
+    raises:
+        yt_dlp.utils.DownloadError: If there is an error during the download process.
+        yt_dlp.utils.ExtractorError: If there is an error extracting the video information.
+    """
+
+    try:
+        print(f"Downloading video stream for {file_name} from URL: {url}")
+        ydl_opts = {
+            "abort_on_error": True,
+            "abort_on_unavailable_fragments": True,
+            "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+            "outtmpl": f"{download_path}/.tmp/{file_name}.%(ext)s",
+            "postprocessors": [
+                {
+                    'key': 'ExecAfterDownload',
+                    'exec_cmd': f'mv "{download_path}/.tmp/{file_name}.%(ext)s" "{download_path}/{file_name}.%(ext)s"'
+                }],
+            "socket_timeout": 30,
+            "verbose": True
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+    except (AttributeError, TypeError, ValueError,
+            yt_dlp.utils.DownloadError, yt_dlp.utils.ExtractorError) as exception:
+        print(f"Error downloading {file_name}: {exception} for URL: {url}")
+
+def get_video_transcript_en(video_id: str) -> str:
+    """
+    Retrieves the English transcript of a YouTube video and returns it in plain text format.
+
+    args:
+        video_id (str): The unique identifier for the YouTube video.
+
+    returns:
+        str: A plain text formatted string containing the transcript of the video.
+    """
+    return TextFormatter().format_transcript(YouTubeTranscriptApi.get_transcript(video_id))
         
 def get_video_url(developer_key: str, service_name: str, query: str, version: str) -> str:
 
