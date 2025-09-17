@@ -6,7 +6,7 @@ def read_requirements():
 
 setup(
     name="google",
-    version="0.9.2", 
+    version="0.10.2", 
     packages=find_packages(),
     install_requires=read_requirements(),
     author="ninja-con-gafas",

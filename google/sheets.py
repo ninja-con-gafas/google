@@ -4,8 +4,12 @@ The module provides utilities to interact with Google Sheets using a service acc
 
 from google.oauth2.service_account import Credentials
 from gspread import authorize, Spreadsheet
+from logging import basicConfig, getLogger, INFO
 from pandas import DataFrame
 from typing import Dict
+
+basicConfig(level=INFO)
+logger = getLogger(__name__)
 
 def get_worksheets(spreadsheet_name: str, credentials: Credentials) -> Dict[str, DataFrame]:
 
@@ -25,7 +29,7 @@ def get_worksheets(spreadsheet_name: str, credentials: Credentials) -> Dict[str,
         None
     """
 
-    print(f"Loading all the worksheets from the {spreadsheet_name} spreadsheet")
+    logger.info(f"Loading all the worksheets from the {spreadsheet_name} spreadsheet")
     spreadsheet: Spreadsheet = authorize(credentials).open(spreadsheet_name)
     return {worksheet.title: DataFrame(data=worksheet.get_all_values()[1:],
                                        columns=worksheet.get_all_values()[0])

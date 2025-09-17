@@ -4,7 +4,11 @@ The module handles identity and access management for Google services.
 
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build, Resource
+from logging import basicConfig, getLogger, INFO
 from typing import List
+
+basicConfig(level=INFO)
+logger = getLogger(__name__)
 
 def build_resource_for_service_account(path: str, scopes: List[str], service_name: str, version: str) -> Resource:
 
@@ -25,7 +29,7 @@ def build_resource_for_service_account(path: str, scopes: List[str], service_nam
         google.auth.exceptions.GoogleAuthError: If loading the credentials or building the resource fails.
     """
 
-    print(f"Loading credentials for Google Service Account from the file: {path}")
+    logger.info(f"Loading credentials for Google Service Account from the file: {path}")
     return (build(credentials=Credentials.from_service_account_file(filename=path, scopes=scopes),
                   serviceName=service_name,
                   version=version))
@@ -42,6 +46,6 @@ def read_api_key(path: str) -> str:
         str: API key
     """
 
-    print(f"Reading Gemini Developer API key from the file: {path}")
+    logger.info(f"Reading Gemini Developer API key from the file: {path}")
     with open(path) as api_key:
         return api_key.read()

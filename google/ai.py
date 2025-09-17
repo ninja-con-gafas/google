@@ -2,7 +2,11 @@
 The module provides utilities to interact with Google AI.
 """
 
+from logging import basicConfig, getLogger, INFO
 from requests import post, Response
+
+basicConfig(level=INFO)
+logger = getLogger(__name__)
 
 def get_response(api_key: str, prompt:str) -> Response:
 
@@ -18,7 +22,7 @@ def get_response(api_key: str, prompt:str) -> Response:
         Response: The response object from the API call containing the generated content and response details.
     """
 
-    print(f"Getting response from Gemini 1.5 Flash for the given prompt: {prompt}")
+    logger.info(f"Getting response from Gemini 1.5 Flash for the given prompt: {prompt}")
     headers = {
         'Content-Type': 'application/json',
     }

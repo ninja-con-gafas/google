@@ -5,12 +5,16 @@ The module provides utilities to interact with YouTube.
 import yt_dlp
 
 from ffmpeg import Error, input, probe
+from logging import basicConfig, getLogger, INFO
 from re import search
 from requests import get, post, Response
 from requests.exceptions import HTTPError, ConnectionError, Timeout
 from typing import Dict, List
 from youtube_transcript_api import TranscriptsDisabled, YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
+
+basicConfig(level=INFO)
+logger = getLogger(__name__)
 
 def download_audio_as_mp3(download_path: str, file_name: str, url: str) -> None:
 
@@ -31,7 +35,7 @@ def download_audio_as_mp3(download_path: str, file_name: str, url: str) -> None:
     """
 
     try:
-        print(f"Downloading audio stream for {file_name} from URL: {url}")
+        logger.info(f"Downloading audio stream for {file_name} from URL: {url}")
         ydl_opts = {
             "abort_on_error": True,
             "abort_on_unavailable_fragments": True,
@@ -54,7 +58,7 @@ def download_audio_as_mp3(download_path: str, file_name: str, url: str) -> None:
             ydl.download([url])
     except (AttributeError, TypeError, ValueError,
             yt_dlp.utils.DownloadError, yt_dlp.utils.ExtractorError) as exception:
-        print(f"Error downloading {file_name}: {exception} for URL: {url}")
+        logger.error(f"Error downloading {file_name}: {exception} for URL: {url}")
 
 def download_video_as_mp4(download_path: str, file_name: str, url: str) -> None:
 
@@ -75,7 +79,7 @@ def download_video_as_mp4(download_path: str, file_name: str, url: str) -> None:
     """
 
     try:
-        print(f"Downloading video stream for {file_name} from URL: {url}")
+        logger.info(f"Downloading video stream for {file_name} from URL: {url}")
         ydl_opts = {
             "abort_on_error": True,
             "abort_on_unavailable_fragments": True,
@@ -93,7 +97,7 @@ def download_video_as_mp4(download_path: str, file_name: str, url: str) -> None:
             ydl.download([url])
     except (AttributeError, TypeError, ValueError,
             yt_dlp.utils.DownloadError, yt_dlp.utils.ExtractorError) as exception:
-        print(f"Error downloading {file_name}: {exception} for URL: {url}")
+        logger.error(f"Error downloading {file_name}: {exception} for URL: {url}")
 
 def get_video_duration(video_file_path: str) -> float:
 
@@ -111,7 +115,7 @@ def get_video_duration(video_file_path: str) -> float:
         ValueError: If the metadata does not contain a valid duration value.
     """
 
-    print(f"Getting video duration of {video_file_path}")
+    logger.info(f"Getting video duration of {video_file_path}")
     return float(probe(filename=video_file_path, v='error', select_streams='v:0', show_entries='stream=duration')
                  .get("format")
                  .get("duration"))
@@ -131,7 +135,7 @@ def get_video_id(url: str) -> str:
         AttributeError: If the pattern is not found in the input string.
     """
 
-    print(f"Extracting Video ID from URL: {url}")
+    logger.info(f"Extracting Video ID from URL: {url}")
     pattern = r'(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=|live/)|youtu\.be/)([^"&?/ ]{11})'
     return search(pattern=pattern, string=url).group(1)
 
@@ -152,7 +156,7 @@ def get_video_metadata(video_id: str) -> Dict:
         Timeout: Raised if the request to the server times out.
     """
 
-    print(f"Getting video metadata for the YouTube video ID: {video_id}")
+    logger.info(f"Getting video metadata for the YouTube video ID: {video_id}")
     url = "https://www.youtube.com/oembed"
     params = {
         "format": "json",
@@ -163,7 +167,7 @@ def get_video_metadata(video_id: str) -> Dict:
         response = get(url, params=params)
         response.raise_for_status()
     except (ConnectionError, HTTPError, Timeout) as exception:
-        print(f"An error occurred: {exception}")
+        logger.error(f"An error occurred: {exception}")
         return {}
     else:
         return response.json()
@@ -181,7 +185,7 @@ def get_video_transcript_en(video_id: str) -> str:
     """
 
     try:
-        print(f"Fetching English transcript for the video ID: {video_id}")
+        logger.info(f"Fetching English transcript for the video ID: {video_id}")
         return TextFormatter().format_transcript(YouTubeTranscriptApi.get_transcript(video_id))
     except TranscriptsDisabled:
         return f"Transcripts are disabled for video ID {video_id}"
@@ -224,10 +228,10 @@ def search_youtube(query: str) -> List[str]:
         Timeout: Raised if the request to the server times out.
     """
 
-    print(f"Getting the list of video URLs for the search query: {query}")
+    logger.info(f"Getting the list of video URLs for the search query: {query}")
     url = 'https://www.youtube.com/youtubei/v1/search'
     params = {
-        'prettyPrint': 'false'
+        'prettylogger.error': 'false'
     }
     headers = {
         'Accept': '*/*',
@@ -252,7 +256,7 @@ def search_youtube(query: str) -> List[str]:
         response: Response = post(url, params=params, headers=headers, json=json_data)
         response.raise_for_status()
     except (ConnectionError, HTTPError, Timeout) as exception:
-        print(f"An error occurred: {exception}")
+        logger.error(f"An error occurred: {exception}")
     else:
         video_ids: List[str] = []
 
